@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyclebaz MVP</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .animate-fade-in-up { animation: fadeInUp 0.3s ease-out; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- ICONS (Inline SVGs for standalone deployment) ---
+        const Icons = {
+            Search: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+            MapPin: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>,
+            Filter: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+            Menu: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
+            X: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+            Camera: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>,
+            ShieldCheck: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>,
+            AlertTriangle: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>,
+            Heart: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>,
+            User: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+            Phone: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+            Star: ({size=20, className, fill="none"}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+            ChevronRight: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
+            Bike: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5V14l-3-3 4-3 2 3h2"/><path d="M5.5 14a3.8 3.8 0 0 1-1.3-.2"/></svg>,
+            Wrench: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>,
+            LogIn: ({size=20, className}) => <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/></svg>
+        };
+
+        // --- MOCK DATA ---
+        const MOCK_LISTINGS = [
+            {
+                id: 1,
+                type: 'Cycle',
+                category: 'MTB',
+                brand: 'Btwin',
+                model: 'Rockrider ST100',
+                condition: 'Good',
+                price: 12500,
+                city: 'Delhi',
+                pincode: '110001',
+                sellerType: 'Individual',
+                sellerName: 'Amit Kumar',
+                sellerRating: 4.2,
+                image: 'https://images.unsplash.com/photo-1576435728678-68d0fbf94e91?auto=format&fit=crop&q=80&w=800',
+                features: ['21 Gears', 'Front Suspension', 'Alloy Frame'],
+                postedDate: '2 days ago',
+            },
+            {
+                id: 2,
+                type: 'Cycle',
+                category: 'Road',
+                brand: 'Giant',
+                model: 'SCR 2',
+                condition: 'Like New',
+                price: 45000,
+                city: 'Mumbai',
+                pincode: '400001',
+                sellerType: 'Super Seller',
+                sellerName: 'Mumbai Cycles Hub',
+                shopName: 'Mumbai Cycles Hub',
+                sellerRating: 4.9,
+                image: 'https://images.unsplash.com/photo-1485965120184-e224f723d621?auto=format&fit=crop&q=80&w=800',
+                features: ['Shimano Sora', 'Carbon Fork', 'Service Warranty'],
+                postedDate: '4 hours ago',
+                isSuperSeller: true,
+            },
+            {
+                id: 3,
+                type: 'Accessory',
+                category: 'Helmet',
+                brand: 'Decathlon',
+                model: 'RoadR 500',
+                condition: 'New',
+                price: 1800,
+                city: 'Bangalore',
+                pincode: '560001',
+                sellerType: 'Individual',
+                sellerName: 'Rahul S.',
+                sellerRating: 4.0,
+                image: 'https://images.unsplash.com/photo-1559087316-6b2633882853?auto=format&fit=crop&q=80&w=800',
+                features: ['M Size', 'Never Used', 'Matte Black'],
+                postedDate: '1 week ago',
+            },
+            {
+                id: 4,
+                type: 'Cycle',
+                category: 'Hybrid',
+                brand: 'Firefox',
+                model: 'Rapide',
+                condition: 'Very Good',
+                price: 18000,
+                city: 'Hyderabad',
+                pincode: '500001',
+                sellerType: 'Super Seller',
+                sellerName: 'Hyderabad Bike Station',
+                shopName: 'Hyderabad Bike Station',
+                sellerRating: 4.8,
+                image: 'https://images.unsplash.com/photo-1532298229144-0ec0c57515c7?auto=format&fit=crop&q=80&w=800',
+                features: ['7 Speed', 'V-Brakes', 'City Tires'],
+                postedDate: '1 day ago',
+                isSuperSeller: true,
+            },
+        ];
+
+        // --- COMPONENTS ---
+
+        const Badge = ({ children, className }) => (
+            <span className={`px-2 py-0.5 rounded text-xs font-medium ${className}`}>
+                {children}
+            </span>
+        );
+
+        const Modal = ({ isOpen, onClose, title, children }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="bg-white rounded-lg w-full max-w-md p-6 relative animate-fade-in-up">
+                        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+                            <Icons.X size={24} />
+                        </button>
+                        <h2 className="text-xl font-bold mb-4">{title}</h2>
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        function CyclebazApp() {
+            const [view, setView] = useState('browse'); // browse, sell, profile
+            const [userRole, setUserRole] = useState('Guest'); // Guest, Buyer, Seller, Super Seller
+            const [showLoginModal, setShowLoginModal] = useState(false);
+            const [listings, setListings] = useState(MOCK_LISTINGS);
+            const [filters, setFilters] = useState({ city: 'All', type: 'All' });
+            const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+            // Simulating Login Flow
+            const handleLogin = () => {
+                // In a real app, this would handle OTP
+                setUserRole('Buyer');
+                setShowLoginModal(false);
+            };
+
+            const handleListingAction = (action) => {
+                if (userRole === 'Guest') {
+                    setShowLoginModal(true);
+                } else {
+                    // Perform actual action (e.g., open WhatsApp, View Details)
+                    if (action === 'contact') {
+                        alert("Redirecting to WhatsApp with pre-filled message...");
+                    }
+                }
+            };
+
+            const filteredListings = listings.filter(item => {
+                const cityMatch = filters.city === 'All' || item.city === filters.city;
+                const typeMatch = filters.type === 'All' || item.type === filters.type;
+                return cityMatch && typeMatch;
+            });
+
+            return (
+                <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+                
+                {/* --- DEBUG / DEMO CONTROLS (Sticky Top) --- */}
+                <div className="bg-slate-800 text-white p-2 text-xs flex flex-col md:flex-row justify-between items-center sticky top-0 z-50 gap-2">
+                    <span className="font-mono">Cyclebaz DEMO Mode</span>
+                    <div className="flex items-center gap-2">
+                    <span>Simulate Role:</span>
+                    <select 
+                        value={userRole} 
+                        onChange={(e) => setUserRole(e.target.value)}
+                        className="bg-slate-700 border border-slate-600 rounded px-2 py-1"
+                    >
+                        <option value="Guest">Guest (Restricted)</option>
+                        <option value="Buyer">Buyer (Logged In)</option>
+                        <option value="Seller">Individual Seller (Limit 3)</option>
+                        <option value="Super Seller">Super Seller (Unlimited)</option>
+                    </select>
+                    </div>
+                </div>
+
+                {/* --- HEADER --- */}
+                <header className="bg-white shadow-sm sticky top-10 z-40">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-16">
+                        {/* Logo */}
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('browse')}>
+                        <div className="bg-green-600 text-white p-1.5 rounded-lg">
+                            <Icons.Bike size={24} />
+                        </div>
+                        <span className="text-xl font-bold tracking-tight text-green-800">Cyclebaz</span>
+                        </div>
+
+                        {/* Desktop Nav */}
+                        <nav className="hidden md:flex items-center gap-8">
+                        <button 
+                            onClick={() => setView('browse')}
+                            className={`text-sm font-medium ${view === 'browse' ? 'text-green-600' : 'text-gray-500 hover:text-gray-900'}`}
+                        >
+                            Buy Cycles
+                        </button>
+                        <button 
+                            onClick={() => setView('sell')}
+                            className={`text-sm font-medium ${view === 'sell' ? 'text-green-600' : 'text-gray-500 hover:text-gray-900'}`}
+                        >
+                            Sell Now
+                        </button>
+                        {userRole !== 'Guest' && (
+                            <button className="text-sm font-medium text-gray-500 hover:text-gray-900">
+                            Dashboard
+                            </button>
+                        )}
+                        </nav>
+
+                        {/* Auth / Profile Button */}
+                        <div className="hidden md:flex items-center gap-4">
+                        {userRole === 'Guest' ? (
+                            <button 
+                            onClick={() => setShowLoginModal(true)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center gap-2"
+                            >
+                            <Icons.LogIn size={16} /> Login / Signup
+                            </button>
+                        ) : (
+                            <div className="flex items-center gap-2">
+                            <div className="bg-green-100 text-green-800 p-2 rounded-full">
+                                <Icons.User size={20} />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-xs font-medium text-gray-500">Logged in as</span>
+                                <span className="text-sm font-bold leading-none">{userRole}</span>
+                            </div>
+                            </div>
+                        )}
+                        </div>
+
+                        {/* Mobile Menu Button */}
+                        <button className="md:hidden p-2 text-gray-600" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                        <Icons.Menu size={24} />
+                        </button>
+                    </div>
+                    </div>
+                    
+                    {/* Mobile Menu */}
+                    {mobileMenuOpen && (
+                    <div className="md:hidden bg-white border-t p-4 space-y-4">
+                        <button onClick={() => { setView('browse'); setMobileMenuOpen(false); }} className="block w-full text-left font-medium text-gray-700">Buy Cycles</button>
+                        <button onClick={() => { setView('sell'); setMobileMenuOpen(false); }} className="block w-full text-left font-medium text-gray-700">Sell Now</button>
+                        <button onClick={() => { setShowLoginModal(true); setMobileMenuOpen(false); }} className="block w-full text-left font-medium text-green-600">Login / Signup</button>
+                    </div>
+                    )}
+                </header>
+
+                {/* --- MAIN CONTENT --- */}
+                <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    
+                    {view === 'browse' && (
+                    <div className="space-y-6">
+                        
+                        {/* Search & Filter Bar */}
+                        <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="relative col-span-2">
+                            <Icons.Search className="absolute left-3 top-3 text-gray-400" size={20} />
+                            <input 
+                                type="text" 
+                                placeholder="Search for cycles, brands, or accessories..." 
+                                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                            />
+                            </div>
+                            
+                            <div className="relative">
+                            <Icons.MapPin className="absolute left-3 top-3 text-gray-400" size={20} />
+                            <select 
+                                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none bg-white appearance-none"
+                                value={filters.city}
+                                onChange={(e) => setFilters({...filters, city: e.target.value})}
+                            >
+                                <option value="All">All Cities</option>
+                                <option value="Delhi">Delhi NCR</option>
+                                <option value="Mumbai">Mumbai</option>
+                                <option value="Bangalore">Bangalore</option>
+                                <option value="Hyderabad">Hyderabad</option>
+                            </select>
+                            </div>
+
+                            <div className="relative">
+                            <Icons.Filter className="absolute left-3 top-3 text-gray-400" size={20} />
+                            <select 
+                                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 focus:ring-2 focus:ring-green-500 outline-none bg-white appearance-none"
+                                value={filters.type}
+                                onChange={(e) => setFilters({...filters, type: e.target.value})}
+                            >
+                                <option value="All">All Categories</option>
+                                <option value="Cycle">Cycles Only</option>
+                                <option value="Accessory">Accessories</option>
+                            </select>
+                            </div>
+                        </div>
+                        </div>
+
+                        {/* Listing Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {filteredListings.map((item) => (
+                            <div key={item.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+                            
+                            {/* Image Section */}
+                            <div className="relative h-48 bg-gray-200 overflow-hidden group">
+                                {item.isSuperSeller && (
+                                <div className="absolute top-2 left-2 z-10 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded shadow flex items-center gap-1">
+                                    <Icons.Star size={12} fill="currentColor" /> SUPER SELLER
+                                </div>
+                                )}
+                                <img 
+                                src={item.image} 
+                                alt={item.model} 
+                                className={`w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 ${userRole === 'Guest' ? 'blur-sm scale-110' : ''}`}
+                                />
+                                {userRole === 'Guest' && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
+                                    <Badge className="bg-black bg-opacity-60 text-white backdrop-blur-md">Login to View</Badge>
+                                </div>
+                                )}
+                                <button className="absolute top-2 right-2 p-1.5 bg-white rounded-full text-gray-400 hover:text-red-500 shadow-sm">
+                                <Icons.Heart size={18} />
+                                </button>
+                            </div>
+
+                            {/* Content Section */}
+                            <div className="p-4 flex flex-col flex-grow">
+                                <div className="flex justify-between items-start mb-2">
+                                <div>
+                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{item.brand}</p>
+                                    <h3 className="font-bold text-lg text-gray-900 truncate">{item.model}</h3>
+                                </div>
+                                </div>
+
+                                {/* Tags */}
+                                <div className="flex flex-wrap gap-1 mb-4">
+                                <Badge className="bg-gray-100 text-gray-600">{item.category}</Badge>
+                                <Badge className="bg-gray-100 text-gray-600">{item.condition}</Badge>
+                                <Badge className="bg-green-50 text-green-700 flex items-center gap-1">
+                                    <Icons.MapPin size={10} /> {item.city}
+                                </Badge>
+                                </div>
+
+                                {/* Features Preview */}
+                                <div className="text-xs text-gray-500 mb-4 space-y-1">
+                                {item.features.slice(0, 2).map((feat, idx) => (
+                                    <div key={idx} className="flex items-center gap-1">
+                                    <div className="w-1 h-1 rounded-full bg-gray-400"></div> {feat}
+                                    </div>
+                                ))}
+                                </div>
+
+                                {/* Footer: Price & Action */}
+                                <div className="mt-auto pt-4 border-t border-gray-50 flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-gray-400 mb-0.5">Asking Price</p>
+                                    {userRole === 'Guest' ? (
+                                    <span className="text-lg font-bold text-gray-400">₹ XX,XXX</span>
+                                    ) : (
+                                    <span className="text-xl font-bold text-green-700">₹ {item.price.toLocaleString()}</span>
+                                    )}
+                                </div>
+                                
+                                <button 
+                                    onClick={() => handleListingAction('contact')}
+                                    className={`px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-2 transition-all ${
+                                    userRole === 'Guest' 
+                                    ? 'bg-gray-900 text-white hover:bg-gray-800' 
+                                    : 'bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-200'
+                                    }`}
+                                >
+                                    {userRole === 'Guest' ? (
+                                    <>Unlock <Icons.ChevronRight size={16} /></>
+                                    ) : (
+                                    <><Icons.Phone size={16} /> Contact</>
+                                    )}
+                                </button>
+                                </div>
+
+                                {/* Seller Reliability (Only visible if not guest) */}
+                                {userRole !== 'Guest' && (
+                                <div className="mt-3 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500 flex items-center gap-1">
+                                    <Icons.User size={12} /> {item.sellerType === 'Super Seller' ? item.shopName : item.sellerName}
+                                    </span>
+                                    <button 
+                                    onClick={() => alert("Seller reported to Admin for non-response.")}
+                                    className="text-[10px] text-red-500 hover:underline flex items-center gap-1"
+                                    >
+                                    <Icons.AlertTriangle size={10} /> Seller not responding?
+                                    </button>
+                                </div>
+                                )}
+
+                            </div>
+                            </div>
+                        ))}
+                        </div>
+                    </div>
+                    )}
+
+                    {/* --- SELL VIEW --- */}
+                    {view === 'sell' && (
+                    <div className="max-w-2xl mx-auto">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8">
+                        <div className="text-center mb-8">
+                            <h2 className="text-2xl font-bold text-gray-900">List your Item</h2>
+                            <p className="text-gray-500 mt-2">Reach thousands of buyers in your city</p>
+                        </div>
+
+                        {/* Selling Limit Warning for Individual Sellers */}
+                        {userRole === 'Seller' && (
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 flex items-start gap-3">
+                            <div className="bg-orange-100 p-1 rounded text-orange-600 mt-0.5">
+                                <Icons.AlertTriangle size={16} />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-orange-800">Listing Limit: 1/3 used</h4>
+                                <p className="text-xs text-orange-700 mt-1">Individual sellers can post up to 3 active listings. Upgrade to Super Seller for unlimited posts.</p>
+                            </div>
+                            </div>
+                        )}
+
+                        <form className="space-y-6" onSubmit={(e) => {e.preventDefault(); alert("Listing submitted!"); setView('browse');}}>
+                            
+                            {/* Category Selection */}
+                            <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-3">What are you selling?</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <label className="cursor-pointer">
+                                <input type="radio" name="listingType" className="peer sr-only" defaultChecked />
+                                <div className="p-4 rounded-lg border-2 border-gray-200 peer-checked:border-green-500 peer-checked:bg-green-50 hover:bg-gray-50 transition-all text-center">
+                                    <div className="flex justify-center mb-2"><Icons.Bike className="text-gray-600 peer-checked:text-green-600" /></div>
+                                    <span className="font-medium text-gray-900">Cycle</span>
+                                </div>
+                                </label>
+                                <label className="cursor-pointer">
+                                <input type="radio" name="listingType" className="peer sr-only" />
+                                <div className="p-4 rounded-lg border-2 border-gray-200 peer-checked:border-green-500 peer-checked:bg-green-50 hover:bg-gray-50 transition-all text-center">
+                                    <div className="flex justify-center mb-2"><Icons.Wrench className="text-gray-600 peer-checked:text-green-600" /></div>
+                                    <span className="font-medium text-gray-900">Accessory / Part</span>
+                                </div>
+                                </label>
+                            </div>
+                            </div>
+
+                            {/* Core Fields */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Brand</label>
+                                <select className="w-full rounded-lg border-gray-300 border p-2.5 focus:ring-2 focus:ring-green-500 outline-none">
+                                <option>Select Brand</option>
+                                <option>Btwin</option>
+                                <option>Hero</option>
+                                <option>Firefox</option>
+                                <option>Giant</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
+                                <select className="w-full rounded-lg border-gray-300 border p-2.5 focus:ring-2 focus:ring-green-500 outline-none">
+                                <option>Like New</option>
+                                <option>Good</option>
+                                <option>Fair</option>
+                                <option>Needs Repair</option>
+                                </select>
+                            </div>
+                            </div>
+
+                            <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Model Name</label>
+                            <input type="text" className="w-full rounded-lg border-gray-300 border p-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="e.g. Rockrider ST100" />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Price (₹)</label>
+                                <input type="number" className="w-full rounded-lg border-gray-300 border p-2.5 focus:ring-2 focus:ring-green-500 outline-none" placeholder="0" />
+                            </div>
+                            <div className="flex items-center pt-6">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" className="w-4 h-4 text-green-600 rounded focus:ring-green-500" />
+                                    <span className="text-sm text-gray-700">Price Negotiable</span>
+                                </label>
+                            </div>
+                            </div>
+
+                            {/* Photo Upload Mock */}
+                            <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Photos (Max 5)</label>
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer">
+                                <div className="flex justify-center mb-2"><Icons.Camera className="text-gray-400" size={32} /></div>
+                                <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
+                                <p className="text-xs text-gray-400 mt-1">JPG, PNG (Max 2MB)</p>
+                            </div>
+                            </div>
+
+                            <div className="pt-4">
+                            <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg transition-all shadow-lg shadow-green-200">
+                                Post Listing
+                            </button>
+                            <p className="text-center text-xs text-gray-400 mt-4 flex items-center justify-center gap-1">
+                                <Icons.ShieldCheck size={12} /> Admin will verify listing before publishing
+                            </p>
+                            </div>
+
+                        </form>
+                        </div>
+                    </div>
+                    )}
+
+                </main>
+
+                {/* --- OTP LOGIN MODAL --- */}
+                <Modal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} title="Login to Cyclebaz">
+                    <div className="space-y-4">
+                    <p className="text-sm text-gray-600">Enter your mobile number to see full prices, unblurred photos, and contact sellers directly.</p>
+                    
+                    <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Mobile Number</label>
+                        <div className="flex">
+                        <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                            +91
+                        </span>
+                        <input 
+                            type="tel" 
+                            className="block w-full rounded-none rounded-r-lg border-gray-300 border p-2.5 focus:ring-2 focus:ring-green-500 outline-none text-sm" 
+                            placeholder="98765 43210" 
+                        />
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={handleLogin}
+                        className="w-full bg-green-600 text-white font-bold py-2.5 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                        Get OTP <Icons.ChevronRight size={16} />
+                    </button>
+
+                    <div className="text-center">
+                        <p className="text-xs text-gray-400 mt-2">
+                        By continuing, you agree to our Terms of Service.
+                        </p>
+                    </div>
+                    </div>
+                </Modal>
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<CyclebazApp />);
+    </script>
+</body>
+</html>
+
